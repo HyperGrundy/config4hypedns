@@ -1,0 +1,145 @@
+#!/usr/bin/python
+# You may redistribute this program and/or modify it under the terms of
+# the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+
+############################################################################
+# Script to retreive valid HypeDNS TLDs and generate a configuration file. #
+############################################################################
+
+# Courtesy of your friendly neighborhood Grundy
+
+
+
+import sys
+import argparse
+import urllib2
+import simplejson as json
+
+
+
+def getICANN():
+    try:
+        if not args.quiet:
+            print " -Getting ICANN TLDs from the internet..."
+        icannlist = urllib2.urlopen('http://data.iana.org/TLD/tlds-alpha-by-domain.txt')
+    except urllib2.URLError as e:
+        sys.stderr.write("ERROR: Failed to retrieve ICANN TLDs: {0}\n".format(e.reason))
+        raise
+        return False
+    except urllib2.HTTPError as e:
+        sys.stderr.write("ERROR: Failed to retrieve ICANN TLDs with HTTP error: {0} - {1}\n".format(e.code, e.reason))
+        raise
+        return False
+    icanntlds = set()
+    icannlist.readline()
+    for line in icannlist:
+        icanntlds.add(line.strip().lower())
+    return icanntlds
+
+
+
+def getHypeDNS(exclusionSet):
+    try:
+        if not args.quiet:
+            print " -Getting HypeDNS TLDs from Hyperboria..."
+        hypejson = urllib2.urlopen('http://[fc5d:baa5:61fc:6ffd:9554:67f0:e290:7535]/nodes/list.json')
+    except urllib2.URLError as e:
+        sys.stderr.write("ERROR: Failed to retrieve HypeDNS TLDs: {0}\n".format(e.reason))
+        raise
+        return False
+    except urllib2.HTTPError as e:
+        sys.stderr.write("ERROR: Failed to retrieve HypeDNS TLDs with HTTP error: {0} - {1}\n".format(e.code, e.reason))
+        raise
+        return False
+    try:
+        hypehosts = json.loads(hypejson.read())
+    except json.JSONDecodeError as e:
+        sys.stderr.write("ERROR: Failed to decode HypeDNS JSON: {0}\n".format(e.msg))
+        raise
+        return False
+    tldlist = []
+    for host in hypehosts['nodes']:
+        if len(host['name']) > 0:
+            if host['ip'][-4:] != host['name'][-4:]:
+                if ' ' not in host['name']:
+                    tld = host['name'].split('.')[-1].lower()
+                    if tld[0].isalnum():
+                        tldlist.append(tld)
+    tldset = set(tldlist)
+    tldset -= exclusionSet
+    tldlist = list(tldset)
+    tldlist.sort()
+    return tldlist
+
+
+
+def writeDnsmasqConf(targetfile):
+    try:
+        if not args.quiet:
+            print " -Generating "+targetfile+" file for dnsmasq..."
+        with open(targetfile,'w') as configfile:
+            configfile.write('# Special server option for HypeDNS TLDs\n\n')
+            for tld in tldlist:
+                configfile.write('server=/'+tld+'/fc5d:baa5:61fc:6ffd:9554:67f0:e290:7535\n')
+            configfile.write('\n')
+            configfile.close()
+            return True
+    except IOError:
+        sys.stderr.write("ERROR: Failed to open and/or write to file (Do you need to be root?)\n")
+        raise
+        return False
+
+
+
+def writeBindConf(targetfile):
+    try:
+        if not args.quiet:
+            print " -Generating "+targetfile+" file for BIND 9..."
+        with open(targetfile,'w') as configfile:
+            configfile.write('# Fordwarding zones for HypeDNS TLDs\n\n')
+            for tld in tldlist:
+                configfile.write('zone "'+tld+'" { type forward; forwarders { fc5d:baa5:61fc:6ffd:9554:67f0:e290:7535; }; };\n')
+            configfile.write('\n')
+            configfile.close()
+            return True
+    except IOError:
+        sys.stderr.write("ERROR: Failed to open and/or write to file (Do you need to be root?)\n")
+        raise
+        return False
+
+
+
+parser = argparse.ArgumentParser(description='Retreives currrent ICANN TLDs, current HypeDNS TLDs, validates HypeDNS TLDs and removes any that conflict with ICANN, and generates a configuration file.')
+parser.add_argument("-q", "--quiet", action="store_true", help='Quits status messages (errors are still shown).')
+parser.add_argument('--syntax', choices=['dnsmasq','bind9'], default='dnsmasq', help='Indicate configuration sytax to use (default: dnsmasq).')
+parser.add_argument('--target', metavar='FILE', help='Target file for output (default: syntax appropriate file in current directory).')
+args = parser.parse_args()
+try:
+    tldlist = getHypeDNS(getICANN())
+    if args.syntax == 'bind9':
+        if args.target:
+            writeBindConf(args.target)
+        else:
+            writeBindConf('named.conf.hypedns')
+    elif args.syntax == 'dnsmasq':
+        if args.target:
+            writeDnsmasqConf(args.target)
+        else:
+            writeDnsmasqConf('dnsmasq.conf.hypedns')
+except:
+    sys.stderr.write("ERROR: Failed to generate dnsmasq configuration\n")
+    sys.exit(1)
+
+
+
