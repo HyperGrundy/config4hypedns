@@ -22,6 +22,7 @@
 
 
 import sys
+import os
 import argparse
 import urllib2
 import simplejson as json
@@ -87,7 +88,7 @@ def getHypeDNS(exclusionSet):
 def writeDnsmasqConf(targetfile):
     try:
         if not args.quiet:
-            print " -Generating "+targetfile+" file for dnsmasq..."
+            print " -Generating "+targetfile+" file for Dnsmasq..."
         with open(targetfile,'w') as configfile:
             configfile.write('# Special server option for HypeDNS TLDs\n\n')
             for tld in tldlist:
@@ -120,25 +121,78 @@ def writeBindConf(targetfile):
 
 
 
-parser = argparse.ArgumentParser(description='Retreives currrent ICANN TLDs, current HypeDNS TLDs, validates HypeDNS TLDs and removes any that conflict with ICANN, and generates a configuration file.')
+def discoverSyntax():
+    return
+
+
+
+def discoverTarget():
+    
+            #if os.path.isdir('/etc/NetworkManager/dnsmasq.d'):
+            
+            #elif os.path.isdir('/etc/dnsmasq.d'):
+            
+            #elif os.path.
+    
+    return
+
+
+
+def scheduleUpdates(syntax, target):
+    return
+
+
+
+parser = argparse.ArgumentParser(description='Configures Dnsmasq or BIND 9 to identify and forward HypeDNS host names to the HypeDNS name server without affecting normal internet name resolution. Retrieves ICANN TLD list, retrieves HypeDNS TLD list, and uses lists to generate a safe configuration file.')
 parser.add_argument("-q", "--quiet", action="store_true", help='Quits status messages (errors are still shown).')
-parser.add_argument('--syntax', choices=['dnsmasq','bind9'], default='dnsmasq', help='Indicate configuration sytax to use (default: dnsmasq).')
-parser.add_argument('--target', metavar='FILE', help='Target file for output (default: syntax appropriate file in current directory).')
+parser.add_argument('--auto-install', action="store_true", help='Attempt to configure and setup auto-updates automatically.')
+parser.add_argument('--syntax', choices=['dnsmasq','bind9'], help='Indicate configuration sytax to use. Required if not using auto-config or auto-update.')
+parser.add_argument('--target', metavar='FILE', help='Target file for output.')
 args = parser.parse_args()
 try:
-    tldlist = getHypeDNS(getICANN())
-    if args.syntax == 'bind9':
-        if args.target:
+    havelist = False
+    if args.auto_install:
+        if not args.syntax:
+            discoverSyntax()
+        if not args.target:
+            discoverTarget()
+        if args.syntax == 'bind9':
+            
+            if not havelist: 
+                tldlist = getHypeDNS(getICANN())
+                havelist = True
             writeBindConf(args.target)
+            scheduleUpdates(args.syntax, args.target)
+        elif args.syntax == 'dnsmasq':
+            
+            if not havelist: 
+                tldlist = getHypeDNS(getICANN())
+                havelist = True
+            writeDnsmasqConf(args.target)               
+            scheduleUpdates(args.syntax, args.target)
+    else:
+        if args.syntax:
+            if args.syntax == 'bind9':
+                if not havelist: 
+                    tldlist = getHypeDNS(getICANN())
+                    havelist = True
+                if args.target:
+                    writeBindConf(args.target)
+                else:
+                    writeBindConf('named.conf.hypedns')
+            elif args.syntax == 'dnsmasq':
+                if not havelist: 
+                    tldlist = getHypeDNS(getICANN())
+                    havelist = True
+                if args.target:
+                    writeDnsmasqConf(args.target)
+                else:
+                    writeDnsmasqConf('dnsmasq.conf.hypedns')
         else:
-            writeBindConf('named.conf.hypedns')
-    elif args.syntax == 'dnsmasq':
-        if args.target:
-            writeDnsmasqConf(args.target)
-        else:
-            writeDnsmasqConf('dnsmasq.conf.hypedns')
+            parser.print_help()
 except:
-    sys.stderr.write("ERROR: Failed to generate dnsmasq configuration\n")
+    sys.stderr.write("***Operation failed\n")
+    raise
     sys.exit(1)
 
 
