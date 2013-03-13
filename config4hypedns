@@ -85,61 +85,136 @@ def getHypeDNS(exclusionSet):
 
 
 
-def writeDnsmasqConf(targetfile):
-    try:
-        if not args.quiet:
-            print " -Generating "+targetfile+" file for Dnsmasq..."
-        with open(targetfile,'w') as configfile:
-            configfile.write('# Special server option for HypeDNS TLDs\n\n')
-            for tld in tldlist:
-                configfile.write('server=/'+tld+'/fc5d:baa5:61fc:6ffd:9554:67f0:e290:7535\n')
-            configfile.write('\n')
-            configfile.close()
+def writeConf(syntax, targetfile):
+    if syntax == 'bind9':
+        try:
+            if not args.quiet:
+                print " -Generating "+targetfile+" file for BIND 9..."
+            with open(targetfile,'w') as configfile:
+                configfile.write('# Fordwarding zones for HypeDNS TLDs\n\n')
+                for tld in tldlist:
+                    configfile.write('zone "'+tld+'" { type forward; forwarders { fc5d:baa5:61fc:6ffd:9554:67f0:e290:7535; }; };\n')
+                configfile.write('\n')
+                configfile.close()
+                return True
+        except IOError:
+            sys.stderr.write("ERROR: Failed to open and/or write to file (Do you need to be root?)\n")
+            raise
+            return False
+    elif syntax == 'dnsmasq':
+        try:
+            if not args.quiet:
+                print " -Generating "+targetfile+" file for Dnsmasq..."
+            with open(targetfile,'w') as configfile:
+                configfile.write('# Special server option for HypeDNS TLDs\n\n')
+                for tld in tldlist:
+                    configfile.write('server=/'+tld+'/fc5d:baa5:61fc:6ffd:9554:67f0:e290:7535\n')
+                configfile.write('\n')
+                configfile.close()
+                return True
+        except IOError:
+            sys.stderr.write("ERROR: Failed to open and/or write to file (Do you need to be root?)\n")
+            raise
+            return False
+
+
+
+def includeConf(syntax, targetfile):
+    if syntax == 'bind9':
+        try:
+            if not args.quiet:
+                print " -Including "+targetfile+" file in BIND 9 configuration...",
+            included = False
+            with open('/etc/bind/named.conf','r') as includefile:    
+                for line in open("file"):
+                    if 'include "'+targetfile+'";' in line:
+                        included = True
+                        print " already included."                
+                includefile.close()
+            if not included:
+                with open('/etc/bind/named.conf','a') as includefile:
+                    includefile.write('\n# Include HypeDNS forwarding zones file\n')
+                    includefile.write('include "'+targetfile+'";\n')
+                    includefile.close()
+                print ""
             return True
-    except IOError:
-        sys.stderr.write("ERROR: Failed to open and/or write to file (Do you need to be root?)\n")
-        raise
-        return False
-
-
-
-def writeBindConf(targetfile):
-    try:
-        if not args.quiet:
-            print " -Generating "+targetfile+" file for BIND 9..."
-        with open(targetfile,'w') as configfile:
-            configfile.write('# Fordwarding zones for HypeDNS TLDs\n\n')
-            for tld in tldlist:
-                configfile.write('zone "'+tld+'" { type forward; forwarders { fc5d:baa5:61fc:6ffd:9554:67f0:e290:7535; }; };\n')
-            configfile.write('\n')
-            configfile.close()
-            return True
-    except IOError:
-        sys.stderr.write("ERROR: Failed to open and/or write to file (Do you need to be root?)\n")
-        raise
-        return False
-
+        except IOError:
+            sys.stderr.write("ERROR: Failed to open and/or write to file (Do you need to be root?)\n")
+            raise
+            return False
+    elif syntax == 'dnsmasq':
+        try:
+            if targetfile == '/etc/dnsmasq.conf.hypedns':
+                if not args.quiet:
+                    print " -Including "+targetfile+" file in dnsmasq configuration...",
+                included = False
+                with open('/etc/dnsmasq.conf','r') as includefile:    
+                    for line in open("file"):
+                        if 'conf-file=/etc/dnsmasq.conf.hypedns' in line:
+                            included = True
+                            print " already included."                
+                    includefile.close()
+                if not included:
+                    with open('/etc/dnsmasq.conf','a') as includefile:
+                        includefile.write('\n# Include HypeDNS conf file\n')
+                        includefile.write('conf-file=/etc/dnsmasq.conf.hypedns\n')
+                        includefile.close()
+                    print ""
+                return True
+            else:
+                return True
+        except IOError:
+            sys.stderr.write("ERROR: Failed to open and/or write to file (Do you need to be root?)\n")
+            raise
+            return False
+        
 
 
 def discoverSyntax():
-    return
+    try:
+        return True
+    except:
+        return False
 
 
 
 def discoverTarget():
-    
-            #if os.path.isdir('/etc/NetworkManager/dnsmasq.d'):
-            
-            #elif os.path.isdir('/etc/dnsmasq.d'):
-            
-            #elif os.path.
-    
-    return
+    try:
+        if args.syntax not in [ 'bind9', 'dnsmasq' ]:
+            discoverSyntax()
+        if args.syntax == 'bind9':
+            if os.path.exists(/etc/bind/named.conf):
+                args.target = '/etc/bind/named.conf.hypedns'
+                return True
+            else:
+                sys.stderr.write("ERROR: Failed to discover correct config file location\n")
+                raise DiscoveryFail
+                return False
+        elif args.syntax == 'dnsmasq':    
+            if os.path.isdir('/etc/NetworkManager/dnsmasq.d'):
+                args.target = '/etc/NetworkManager/dnsmasq.d/hypedns'
+                return True
+            elif os.path.isdir('/etc/dnsmasq.d'):
+                args.target = '/etc/dnsmasq.d/hypedns'
+                return True
+            elif os.path.exists(/etc/dnsmasq.conf):
+                args.target = '/etc/dnsmasq.conf.hypedns'
+                return True
+            else:
+                sys.stderr.write("ERROR: Failed to discover correct config file location\n")
+                raise DiscoveryFail
+                return False
+    except:
+        raise
+        return False
 
 
 
 def scheduleUpdates(syntax, target):
-    return
+    try:
+        return True
+    except:
+        return False
 
 
 
@@ -150,48 +225,26 @@ parser.add_argument('--syntax', choices=['dnsmasq','bind9'], help='Indicate conf
 parser.add_argument('--target', metavar='FILE', help='Target file for output.')
 args = parser.parse_args()
 try:
-    havelist = False
     if args.auto_install:
-        if not args.syntax:
-            discoverSyntax()
-        if not args.target:
-            discoverTarget()
-        if args.syntax == 'bind9':
-            
-            if not havelist: 
-                tldlist = getHypeDNS(getICANN())
-                havelist = True
-            writeBindConf(args.target)
-            scheduleUpdates(args.syntax, args.target)
-        elif args.syntax == 'dnsmasq':
-            
-            if not havelist: 
-                tldlist = getHypeDNS(getICANN())
-                havelist = True
-            writeDnsmasqConf(args.target)               
-            scheduleUpdates(args.syntax, args.target)
+        discoverTarget() 
+        tldlist = getHypeDNS(getICANN())
+        writeConf(args.syntax, args.target)
+        includeConf(args.syntax, args.target)               
+        scheduleUpdates(args.syntax, args.target)
     else:
         if args.syntax:
-            if args.syntax == 'bind9':
-                if not havelist: 
-                    tldlist = getHypeDNS(getICANN())
-                    havelist = True
-                if args.target:
-                    writeBindConf(args.target)
-                else:
-                    writeBindConf('named.conf.hypedns')
-            elif args.syntax == 'dnsmasq':
-                if not havelist: 
-                    tldlist = getHypeDNS(getICANN())
-                    havelist = True
-                if args.target:
-                    writeDnsmasqConf(args.target)
-                else:
-                    writeDnsmasqConf('dnsmasq.conf.hypedns')
+            tldlist = getHypeDNS(getICANN())
+            if args.target:
+                writeConf(args.syntax, args.target)
+            else:
+                if args.syntax == 'bind9':
+                    writeConf(args.syntax, 'named.conf.hypedns')
+                elif args.syntax == 'dnsmasq':
+                    writeConf(args.syntax, 'dnsmasq.conf.hypedns')
         else:
             parser.print_help()
 except:
-    sys.stderr.write("***Operation failed\n")
+    sys.stderr.write("*** Operation failed ***\n")
     raise
     sys.exit(1)
 
