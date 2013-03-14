@@ -183,7 +183,7 @@ def discoverTarget():
         if args.syntax not in [ 'bind9', 'dnsmasq' ]:
             discoverSyntax()
         if args.syntax == 'bind9':
-            if os.path.exists(/etc/bind/named.conf):
+            if os.path.exists('/etc/bind/named.conf'):
                 args.target = '/etc/bind/named.conf.hypedns'
                 return True
             else:
@@ -197,7 +197,7 @@ def discoverTarget():
             elif os.path.isdir('/etc/dnsmasq.d'):
                 args.target = '/etc/dnsmasq.d/hypedns'
                 return True
-            elif os.path.exists(/etc/dnsmasq.conf):
+            elif os.path.exists('/etc/dnsmasq.conf'):
                 args.target = '/etc/dnsmasq.conf.hypedns'
                 return True
             else:
@@ -220,8 +220,8 @@ def scheduleUpdates(syntax, target):
 
 parser = argparse.ArgumentParser(description='Configures Dnsmasq or BIND 9 to identify and forward HypeDNS host names to the HypeDNS name server without affecting normal internet name resolution. Retrieves ICANN TLD list, retrieves HypeDNS TLD list, and uses lists to generate a safe configuration file.')
 parser.add_argument("-q", "--quiet", action="store_true", help='Quits status messages (errors are still shown).')
-parser.add_argument('--auto-install', action="store_true", help='Attempt to configure and setup auto-updates automatically.')
-parser.add_argument('--syntax', choices=['dnsmasq','bind9'], help='Indicate configuration sytax to use. Required if not using auto-config or auto-update.')
+parser.add_argument('--auto-install', action="store_true", help='Attempt to configure configuration files and updates automatically.')
+parser.add_argument('--syntax', choices=['dnsmasq','bind9'], help='Indicate configuration sytax to use. Required if not using auto-install option.')
 parser.add_argument('--target', metavar='FILE', help='Target file for output.')
 args = parser.parse_args()
 try:
