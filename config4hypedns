@@ -22,15 +22,15 @@
 
 
 import sys
-import argparse
 import urllib2
 import simplejson as json
+from optparse import OptionParser
 
 
 
 def getICANN():
     try:
-        if not args.quiet:
+        if not options.quiet:
             print " -Getting ICANN TLDs from the internet..."
         icannlist = urllib2.urlopen('http://data.iana.org/TLD/tlds-alpha-by-domain.txt')
     except urllib2.URLError as e:
@@ -51,7 +51,7 @@ def getICANN():
 
 def getHypeDNS(exclusionSet):
     try:
-        if not args.quiet:
+        if not options.quiet:
             print " -Getting HypeDNS TLDs from Hyperboria..."
         hypejson = urllib2.urlopen('http://[fc5d:baa5:61fc:6ffd:9554:67f0:e290:7535]/nodes/list.json')
     except urllib2.URLError as e:
@@ -86,7 +86,7 @@ def getHypeDNS(exclusionSet):
 
 def writeDnsmasqConf(targetfile):
     try:
-        if not args.quiet:
+        if not options.quiet:
             print " -Generating "+targetfile+" file for dnsmasq..."
         with open(targetfile,'w') as configfile:
             configfile.write('# Special server option for HypeDNS TLDs\n\n')
@@ -104,7 +104,7 @@ def writeDnsmasqConf(targetfile):
 
 def writeBindConf(targetfile):
     try:
-        if not args.quiet:
+        if not options.quiet:
             print " -Generating "+targetfile+" file for BIND 9..."
         with open(targetfile,'w') as configfile:
             configfile.write('# Fordwarding zones for HypeDNS TLDs\n\n')
@@ -120,21 +120,22 @@ def writeBindConf(targetfile):
 
 
 
-parser = argparse.ArgumentParser(description='Retreives currrent ICANN TLDs, current HypeDNS TLDs, validates HypeDNS TLDs and removes any that conflict with ICANN, and generates a configuration file.')
-parser.add_argument("-q", "--quiet", action="store_true", help='Quits status messages (errors are still shown).')
-parser.add_argument('--syntax', choices=['dnsmasq','bind9'], default='dnsmasq', help='Indicate configuration sytax to use (default: dnsmasq).')
-parser.add_argument('--target', metavar='FILE', help='Target file for output (default: syntax appropriate file in current directory).')
-args = parser.parse_args()
+parser = OptionParser()
+parser.add_option('-q', '--quiet', action='store_true', dest='quiet', help='Quits status messages (errors are still shown).')
+parser.add_option('--syntax', choices=['dnsmasq','bind9'], default='dnsmasq', help='Indicate configuration sytax to use (default: dnsmasq).')
+parser.add_option('--target', metavar='FILE', help='Target file for output (default: syntax appropriate file in current directory).')
+(options, args) = parser.parse_args()
+
 try:
     tldlist = getHypeDNS(getICANN())
-    if args.syntax == 'bind9':
-        if args.target:
-            writeBindConf(args.target)
+    if options.syntax == 'bind9':
+        if options.target:
+            writeBindConf(options.target)
         else:
             writeBindConf('named.conf.hypedns')
-    elif args.syntax == 'dnsmasq':
-        if args.target:
-            writeDnsmasqConf(args.target)
+    elif options.syntax == 'dnsmasq':
+        if options.target:
+            writeDnsmasqConf(options.target)
         else:
             writeDnsmasqConf('dnsmasq.conf.hypedns')
 except:
