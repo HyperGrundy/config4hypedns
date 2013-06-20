@@ -10,6 +10,6 @@ The config4hypedns script is designed to correct this by allowing the use of Dns
 
 ### Notes
 
-This is a Python script, so users will need to ensure they have Python installed. It should work with either Python 2 or 3 at this time.
+This is a Python script, so users will need to ensure they have Python installed. It should work with Python 2.6 and up.
 
 Feedback, good or bad, is encouraged. Seek Grundy on IRC, uppit, or socialnode. Email: grundy@hyperboria.name
